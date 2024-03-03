@@ -109,7 +109,13 @@ def _get_results_from_page(soup: BeautifulSoup) -> list:
         result = {}
         for index, cell in enumerate(cells):
             if index in headers:
-                result[headers[index]] = cell.text.strip()
+                # FinishTime results have an encoding issue. We should fix it by changing from CP437 to UTF-8
+                s = cell.text.strip()
+
+                if headers[index] in ["Name", "FirstName", "LastName"]:
+                    s = scraper.cp437_to_utf8(s)
+
+                result[headers[index]] = s
 
         yield result
 
