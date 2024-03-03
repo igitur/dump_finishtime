@@ -117,6 +117,12 @@ def _get_results_from_page(soup: BeautifulSoup) -> list:
 
                 result[headers[index]] = s
 
+                # If results contains only full name, let's try to split it up into FirstName and LastName
+                if headers[index] == "Name" and " " in s and "FirstName" not in headers:
+                    result["FirstName"], result["LastName"] = (
+                        _deduce_first_and_last_name(s)
+                    )
+
         yield result
 
 
@@ -164,3 +170,15 @@ def _propercase_and_remove_spaces(input_string):
     capitalized_string = " ".join(word.capitalize() for word in input_string.split())
     final_string = capitalized_string.replace(" ", "")
     return final_string
+
+
+def _deduce_first_and_last_name(s) -> tuple[str, str]:
+    # use regex to split the string into first and last name where lastname is capital letters only:
+    match = re.match(r"(.+?) ([A-Z][A-Z\ -]*$)", s)
+    if match is None:
+        return (s, "")
+
+    if len(match.groups()) >= 2:
+        return match.groups()[-2:]
+
+    return (match.group(1), "")
