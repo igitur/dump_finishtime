@@ -45,3 +45,6 @@ def post_json(url: str, data: dict):
 
     logger.error(f"Error: {response.status_code}")
     return None
+
+def cp437_to_utf8(s: str) -> str:
+    return s.encode("cp437").decode("utf-8")
