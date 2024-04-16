@@ -5,4 +5,5 @@ isort
 loguru
 openpyxl
 pandas
+pip-system-certs
 requests
