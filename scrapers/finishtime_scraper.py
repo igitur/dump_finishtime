@@ -93,22 +93,18 @@ def _get_results_from_event(event_url: str) -> list:
 def _get_results_from_page(soup: BeautifulSoup) -> list:
     rows = soup.find(id="ctl00_Content_Main_divGrid").find_all("tr")
 
-    header_row = rows[0]
-    header_cells = [
-        child for child in header_row.children if child.name in ["td", "th"]
-    ]
-    headers = dict(
-        (index, _propercase_and_remove_spaces(cell.text))
-        for index, cell in enumerate(header_cells)
-        if "d-xs-table-cell" not in cell.get("class", [])
-    )
+    headers = list(_deduce_headers(rows).values())
 
     for row in rows[1:]:
         # There are some th cells in the table body!
-        cells = [child for child in row.children if child.name in ["td", "th"]]
+        cells = [
+            cell
+            for cell in row.children
+            if cell.name in ["td", "th"] and _is_visible_cell(cell)
+        ]
         result = {}
         for index, cell in enumerate(cells):
-            if index in headers:
+            if index < len(headers):
                 # FinishTime results have an encoding issue. We should fix it by changing from CP437 to UTF-8
                 s = cell.text.strip()
 
@@ -120,10 +116,33 @@ def _get_results_from_page(soup: BeautifulSoup) -> list:
                 # If results contains only full name, let's try to split it up into FirstName and LastName
                 if headers[index] == "Name" and " " in s and "FirstName" not in headers:
                     result["FirstName"], result["LastName"] = (
-                        _deduce_first_and_last_name(s)
+                        scraper.deduce_first_and_last_name_Jan_VAN_DER_MERWE(s)
                     )
 
         yield result
+
+
+def _deduce_headers(rows: list) -> list:
+    header_row = rows[0]
+    header_cells = [
+        child for child in header_row.children if child.name in ["td", "th"]
+    ]
+    headers = dict(
+        (index, _propercase_and_remove_spaces(cell.text))
+        for index, cell in enumerate(header_cells)
+        if _is_visible_cell(cell)
+    )
+
+    return headers
+
+
+def _is_visible_cell(cell) -> bool:
+    class_that_imply_hidden = ["d-sm-none", "d-xs-table-cell"]
+
+    return all(
+        class_name not in cell.get("class", [])
+        for class_name in class_that_imply_hidden
+    )
 
 
 def _get_number_of_pages(soup: BeautifulSoup) -> int:
@@ -170,15 +189,3 @@ def _propercase_and_remove_spaces(input_string):
     capitalized_string = " ".join(word.capitalize() for word in input_string.split())
     final_string = capitalized_string.replace(" ", "")
     return final_string
-
-
-def _deduce_first_and_last_name(s) -> tuple[str, str]:
-    # use regex to split the string into first and last name where lastname is capital letters only:
-    match = re.match(r"(.+?) ([A-Z][A-Z\ -]*$)", s)
-    if match is None:
-        return (s, "")
-
-    if len(match.groups()) >= 2:
-        return match.groups()[-2:]
-
-    return (match.group(1), "")

@@ -17,9 +17,18 @@ def main():
     )
 
     parser.add_argument("-u", "--url", help="Exact full url on finishtime")
+
     parser.add_argument(
         "-o",
         "--output",
+        type=str,
+        default="results.csv",
+        help="Output file (default: results.csv)",
+    )
+
+    parser.add_argument(
+        "-s",
+        "--split-fullname",
         type=str,
         default="results.csv",
         help="Output file (default: results.csv)",
