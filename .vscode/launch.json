@@ -16,9 +16,10 @@
       "program": "${workspaceFolder}/main.py",
       "args": [
         "-u",
-        "https://results.finishtime.co.za/results.aspx?CId=35&RId=4416&EId=2&dt=0&adv=1",
+        "https://results.finishtime.co.za/results.aspx?CId=35&RId=30352",
         "-o",
-        "27 for freedom.csv"
+        "2023-04-15 Two Oceans.csv",
+        "-d"
       ],
       "console": "integratedTerminal",
       "justMyCode": true

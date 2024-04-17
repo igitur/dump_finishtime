@@ -34,11 +34,17 @@ def main():
         help="Output file (default: results.csv)",
     )
 
+    parser.add_argument(
+        "-d",
+        "--detailed",
+        action="store_true",
+        help="Parse data on per runner page",
+    )
     args = parser.parse_args()
 
     if args.url is not None:
         scraper = get_scraper(args.url)
-        results = scraper.get_results()
+        results = scraper.get_results(args.detailed)
         _export_results(results, args.output)
 
 

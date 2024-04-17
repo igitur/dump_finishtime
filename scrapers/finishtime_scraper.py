@@ -13,7 +13,7 @@ class FinishtimeScraper(scraper.Scraper):
     def __init__(self, url):
         self.url = url
 
-    def get_results(self):
+    def get_results(self, detailed: bool) -> list:
         url = _fix_main_page_url(self.url)
         if url is None:
             logger.error("Failed to fix the URL")
@@ -24,12 +24,12 @@ class FinishtimeScraper(scraper.Scraper):
             logger.error("Failed to download the URL")
             return []
 
-        results = list(_get_results_from_main(soup, url))
+        results = list(_get_results_from_main(soup, url, detailed))
 
         return results
 
 
-def _get_results_from_main(soup: BeautifulSoup, base_url) -> list:
+def _get_results_from_main(soup: BeautifulSoup, base_url, detailed: bool) -> list:
     race_name = soup.find(id="ctl00_lblRaceName").text
     events = list(_get_events(soup, base_url))
     for event_name, event_url in events:
@@ -37,7 +37,7 @@ def _get_results_from_main(soup: BeautifulSoup, base_url) -> list:
         event_url = base_url if event_url is None else event_url
 
         logger.debug(f"Event: {event_name} - {event_url}")
-        results = _get_results_from_event(event_url)
+        results = _get_results_from_event(event_url, detailed)
         for result in results:
             result["RaceName"] = race_name
             result["EventName"] = event_name
@@ -77,20 +77,20 @@ def _get_events(soup: BeautifulSoup, base_url) -> list:
         logger.error(f"Failed to get events: {e}")
 
 
-def _get_results_from_event(event_url: str) -> list:
+def _get_results_from_event(event_url: str, detailed: bool) -> list:
     soup = scraper.get(event_url)
     number_of_pages = _get_number_of_pages(soup)
     logger.debug(f"Number of pages: {number_of_pages}")
     for page in range(1, number_of_pages + 1):
         page_url = _append_query_parameters(event_url, {"dt": 0, "PageNo": page})
         logger.debug(f"Page URL: {page_url}")
-        soup = scraper.get(page_url)
-        results = _get_results_from_page(soup)
+        results = _get_results_from_page(page_url, detailed)
         for r in results:
             yield r
 
 
-def _get_results_from_page(soup: BeautifulSoup) -> list:
+def _get_results_from_page(page_url: str, detailed: bool) -> list:
+    soup = scraper.get(page_url)
     rows = soup.find(id="ctl00_Content_Main_divGrid").find_all("tr")
 
     headers = list(_deduce_headers(rows).values())
@@ -119,7 +119,50 @@ def _get_results_from_page(soup: BeautifulSoup) -> list:
                         scraper.deduce_first_and_last_name_Jan_VAN_DER_MERWE(s)
                     )
 
+        if detailed:
+            pattern = re.compile(r"myresults.aspx\?uid=\d+-\d+-\d+-\d+")
+            anchors = row.find_all(
+                lambda tag: tag.name == "a"
+                and tag.has_attr("href")
+                and pattern.match(tag["href"])
+            )
+
+            links = list(set([urljoin(page_url, anchor["href"]) for anchor in anchors]))
+            for link in links:
+                result.update(_get_detailed_results(link))
+
         yield result
+
+
+def _get_detailed_results(link: str) -> dict:
+    soup = scraper.get(link)
+    if soup is None:
+        logger.error("Failed to download the URL")
+        return {}
+
+    rows = soup.find(id="ctl00_Content_Main_divSplitGrid").find_all("tr")
+    headers = list(_deduce_headers(rows).values())
+
+    result = {}
+    for row in rows[1:]:
+        split_name = None
+        split_time = None
+        cells = [
+            cell
+            for cell in row.children
+            if cell.name in ["td", "th"] and _is_visible_cell(cell)
+        ]
+        for index, cell in enumerate(cells):
+            if index < len(headers):
+                if headers[index] == "Name":
+                    split_name = cell.text.strip()
+                elif headers[index] == "Time":
+                    split_time = cell.text.strip()
+
+        if split_name is not None and split_time is not None:
+            result[split_name] = split_time
+
+    return result
 
 
 def _deduce_headers(rows: list) -> list:

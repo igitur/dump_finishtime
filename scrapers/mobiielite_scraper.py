@@ -24,7 +24,7 @@ class MobiiEliteScraper(scraper.Scraper):
     def __init__(self, url):
         self.url = url
 
-    def get_results(self):
+    def get_results(self, detailed: bool) -> list:
         self.race_id = _get_race_id(self.url)
         url = _fix_main_page_url(self.url, self.race_id)
         if url is None:

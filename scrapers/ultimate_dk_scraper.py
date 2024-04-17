@@ -14,7 +14,7 @@ class UltimateDkScraper(scraper.Scraper):
     def __init__(self, url):
         self.url = url
 
-    def get_results(self):
+    def get_results(self, detailed: bool) -> list:
         url = _fix_main_page_url(self.url)
         if url is None:
             logger.error("Failed to fix the URL")

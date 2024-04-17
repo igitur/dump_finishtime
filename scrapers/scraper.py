@@ -10,7 +10,7 @@ PARSER = "html5lib"
 
 class Scraper(ABC):
     @abstractmethod
-    def get_results(self):
+    def get_results(self, detailed: bool) -> list:
         pass
 
 

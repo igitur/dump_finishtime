@@ -14,7 +14,7 @@ class BouttimeScraper(scraper.Scraper):
     def __init__(self, url):
         self.url = url
 
-    def get_results(self):
+    def get_results(self, detailed: bool) -> list:
         soup = scraper.get(self.url)
 
         # Delete viewstate elements from soup
